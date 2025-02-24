@@ -10,6 +10,10 @@ var JUMP_VELOCITY = 4.5
 var walking_speed = 3.0
 var running_speed = 5.0
 
+var running = false
+
+var is_locked = false
+
 @export var sens_horizontal = 0.5
 @export var sens_vertical = 0.5
 
@@ -27,11 +31,20 @@ func _input(event):
 		
 
 func _physics_process(delta):
+	if !animation_player.is_playing():
+		is_locked = false
+	
+	if Input.is_action_just_pressed("kick"):
+		if animation_player.current_animation != "kick":
+			animation_player.play("kick")
+			is_locked = true
 	
 	if Input.is_action_pressed("run"):
 		SPEED = running_speed
+		running = true
 	else:
 		SPEED = walking_speed
+		running = false
 	
 	# Add the gravity.
 	if not is_on_floor():
@@ -46,17 +59,25 @@ func _physics_process(delta):
 	var input_dir = Input.get_vector("left", "right", "forward", "backwards")
 	var direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	if direction:
-		if animation_player.current_animation != "walking":
-			animation_player.play("walking")
+		if !is_locked:
+			if running:
+				if animation_player.current_animation != "running":
+					animation_player.play("running")
+			else:
+				if animation_player.current_animation != "walking":
+					animation_player.play("walking")  
 		
-		visuals.look_at(position + direction)	
+		if !is_locked:
+			visuals.look_at(position + direction)	
 		
 		velocity.x = direction.x * SPEED
 		velocity.z = direction.z * SPEED
 	else:
-		if animation_player.current_animation != "idle":
-			animation_player.play("idle")
+		if !is_locked:
+			if animation_player.current_animation != "idle":
+				animation_player.play("idle")
+			
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 		velocity.z = move_toward(velocity.z, 0, SPEED)
-
-	move_and_slide()
+	if !is_locked:
+		move_and_slide()
